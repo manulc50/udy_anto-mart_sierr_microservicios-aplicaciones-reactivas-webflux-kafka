@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>Buscador de Productos</title>
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css">
+		<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"></script>
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+		<script>
+			function buscar() {
+				const cabeceraTabla = '<thead><tr><th>Nombre</th><th>Precio</th><th>Stock</th><th>Acción</th></tr></thead>'
+				$('#productos').html(cabeceraTabla).append('<tbody>');
+				
+				const url = 'http://localhost:8000/productos?categoria=' + $('#categoria').val();
+				
+				// Al crear una instancia de esta clase, automáticamente se envía una petición http Get a la url indicada con la cabecera
+				// "Accept: text-event-stream"(SSE - Server Side Events).
+				// El comportamiento por defecto de un EventSource es que, cuando la conexión entre el cliente y el servidor se cierra, vuelve
+				// a establecerse una nueva conexión de forma automática.
+				const origenEventos = new EventSource(url);
+				
+				origenEventos.addEventListener('message', function(e) {
+					const datos = JSON.parse(e.data);
+					const filaTabla = `<tr><td>${datos.nombre}</td><td>${datos.precioUnitario}</td><td>${datos.stock}</td><td><a href=# onclick=eliminar(${datos.codProducto})>Eliminar</a></td></tr>`;
+					$('#productos').append(filaTabla);
+				});
+				
+				// Cuando la conexión entre el cliente y el servidor se cierra, cerramos definitivamente la conexción para evitar una nueva
+				// reconexión automática con el servidor(comportamiento por defecto de un EventSource).
+				origenEventos.addEventListener('error', function(e) {
+					origenEventos.close();
+					$('#productos').append('</tbody>');
+				});
+			}
+			
+			function eliminar(codProducto) {
+				const url = `http://localhost:8000/productos/${codProducto}`;
+				
+				$.ajax({
+					url,
+					method: 'delete',
+					success: function(result) {
+						buscar();
+					}
+				});
+			}
+		</script>
+	</head>
+	<body>
+		<div class="container">
+			<br><br>
+			<form class="form-horizontal">
+				<div class="form-group">
+					<label class="control-label col-sm-2">Introduce categoría:</label>
+					<div class="col-sm-5">
+						<input class="form-control" type="text" id="categoria">
+					</div>
+				</div>		
+					
+				<div class="form-group">
+	    			<div class="col-sm-offset-2 col-sm-10">
+			      		<input type="button" class="btn btn-primary" onclick="buscar();" value="Buscar">
+			      	</div>
+			    </div>
+			</form>
+			<br><br>
+			<div>
+				<table class="table table-bordered" id="productos"></table>
+			</div>	
+		</div>
+	</body>
+</html>
